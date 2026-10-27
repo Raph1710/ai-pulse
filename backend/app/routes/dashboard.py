@@ -27,6 +27,13 @@ def org_dashboard(org_id: int | None = None, m: models.Membership = Depends(curr
     members = db.query(models.Membership).filter_by(org_id=target_org_id).all()
     departments = []
     all_flags = {}
+
+    ANONYMITY_THRESHOLD = 5
+    other_employees = 0
+    other_responded = 0
+    other_averages = []
+    other_count = 0
+
     for dept in org.departments:
         dept_members = [x for x in members if x.department_id == dept.id]
         responded = 0
@@ -40,13 +47,40 @@ def org_dashboard(org_id: int | None = None, m: models.Membership = Depends(curr
             for r in rows:
                 for f in r.flags or []:
                     all_flags[f] = all_flags.get(f, 0) + 1
-        avg = (sum(member_averages) / len(member_averages)) if member_averages else None
+
+        if responded >= ANONYMITY_THRESHOLD:
+            avg = (sum(member_averages) / len(member_averages)) if member_averages else None
+            departments.append({
+                "department": dept.name,
+                "employees": len(dept_members),
+                "responded": responded,
+                "average_score": round(avg, 2) if avg is not None else None,
+                "level": maturity_level(avg),
+                "anonymized": False,
+            })
+        else:
+            other_employees += len(dept_members)
+            other_responded += responded
+            other_averages.extend(member_averages)
+            other_count += 1
+
+    if other_count > 0:
+        if other_responded >= ANONYMITY_THRESHOLD:
+            other_avg = (sum(other_averages) / len(other_averages)) if other_averages else None
+            other_level = maturity_level(other_avg)
+            score_val = round(other_avg, 2) if other_avg is not None else None
+        else:
+            other_avg = None
+            other_level = "Insufficient responses for anonymity (<5)"
+            score_val = None
+
         departments.append({
-            "department": dept.name,
-            "employees": len(dept_members),
-            "responded": responded,
-            "average_score": round(avg, 2) if avg is not None else None,
-            "level": maturity_level(avg),
+            "department": "Other teams (anonymized)",
+            "employees": other_employees,
+            "responded": other_responded,
+            "average_score": score_val,
+            "level": other_level,
+            "anonymized": True,
         })
 
     return {
