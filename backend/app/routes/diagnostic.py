@@ -35,6 +35,20 @@ def get_questions(m: models.Membership = Depends(current_membership)):
 @router.post("/submit")
 def submit(body: SubmitIn, m: models.Membership = Depends(current_membership), db: Session = Depends(get_db)):
     bank = {q["id"]: q for q in load_questions()}
+
+    # Archive previous run summary before replacing for progress tracking
+    old_rows = db.query(models.Response).filter_by(membership_id=m.id).all()
+    if old_rows:
+        old_scores = [r.score for r in old_rows if r.score is not None]
+        old_avg = round(sum(old_scores) / len(old_scores), 2) if old_scores else None
+        old_flags = sorted({f for r in old_rows for f in (r.flags or [])})
+        m.last_assessment_summary = {
+            "previous_score": old_avg,
+            "previous_flags": old_flags,
+        }
+        db.query(models.Response).filter_by(membership_id=m.id).delete()
+        db.flush()
+
     for a in body.answers:
         q = bank.get(a.question_id)
         if not q:
