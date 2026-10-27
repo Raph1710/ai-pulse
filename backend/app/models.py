@@ -38,6 +38,7 @@ class Membership(Base):
     role: Mapped[str] = mapped_column(String(20))        # "admin" | "employee"
     job_role: Mapped[str] = mapped_column(String(40))    # e.g. "support", "engineering", "sales", "manager"
     seniority: Mapped[str] = mapped_column(String(20))   # "junior" | "mid" | "senior" | "lead"
+    last_assessment_summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     user = relationship("User", back_populates="memberships")
     org = relationship("Organization")
     department = relationship("Department")

@@ -22,6 +22,20 @@ def my_report(m: models.Membership = Depends(current_membership), db: Session = 
     scores = [r.score for r in rows if r.score is not None]
     avg = sum(scores) / len(scores) if scores else None
     flags = sorted({f for r in rows for f in (r.flags or [])})
+    progress = None
+    if m.last_assessment_summary and m.last_assessment_summary.get("previous_score") is not None and avg is not None:
+        prev_score = m.last_assessment_summary["previous_score"]
+        prev_flags = m.last_assessment_summary.get("previous_flags", [])
+        delta = round(avg - prev_score, 2)
+        resolved_risks = [f for f in prev_flags if f not in flags]
+        new_risks = [f for f in flags if f not in prev_flags]
+        progress = {
+            "previous_score": prev_score,
+            "score_delta": delta,
+            "resolved_risks": resolved_risks,
+            "new_risks": new_risks,
+        }
+
     return {
         "name": m.user.name,
         "organization": m.org.name,
@@ -30,6 +44,7 @@ def my_report(m: models.Membership = Depends(current_membership), db: Session = 
         "level": maturity_level(avg),
         "risks": flags,
         "next_steps": NEXT_STEPS.get(m.job_role, NEXT_STEPS["manager"]),
+        "progress": progress,
     }
 
 
