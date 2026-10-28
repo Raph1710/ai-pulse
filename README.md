@@ -102,11 +102,11 @@ Northwind HR requested two changes:
 2. **Right to delete answers and personal report immediately.**
 
 ### Implementation:
-- In `backend/app/routes/dashboard.py`, any department with `< 5` respondents is grouped into `"Other teams (anonymized)"`. If total responses in `"Other teams"` are `< 5`, scores are suppressed to avoid deductive de-anonymization.
-- In `backend/app/routes/reports.py`, `DELETE /reports/me` deletes all responses for the active membership, immediately updating personal reports and organizational dashboard numbers.
+- In `backend/app/routes/dashboard.py`, any department with `< 5` respondents is grouped into `"Other teams (anonymized)"`. The composite group computes and displays the collective respondent average score and maturity level upon refresh.
+- In `backend/app/routes/reports.py`, `DELETE /reports/me` permanently purges all employee responses and clears archived progress snapshots, immediately cascading to personal reports and organizational dashboard numbers upon refresh.
 
 ### Questions for Northwind HR & Legal:
-1. If all small departments combined still have fewer than 5 respondents (e.g. 3 people total across 2 departments), we currently show the group with score suppressed (`"Insufficient responses for anonymity (<5)"`). Does legal prefer this, or should the row be completely hidden from the table?
+1. When small departments (<5 respondents) are grouped under `"Other teams (anonymized)"`, we currently calculate the collective group average and maturity level. Does legal prefer displaying this collective team score, or would you prefer the score to be completely suppressed until the company reaches a higher total threshold?
 2. After an employee deletes their answers, are they allowed to retake the diagnostic immediately from a clean slate, or is there a required cooling-off period between evaluation cycles?
 3. Should company-wide top risk flags also enforce a minimum frequency threshold (e.g. hiding risks with only 1 occurrence) to prevent deductive identification in small companies?
 
