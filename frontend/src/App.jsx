@@ -10,9 +10,32 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [org, setOrg] = useState(null);
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setSession(null);
+    setOrg(null);
+    setStep("login");
+  };
+
   return (
     <div className="wrap">
-      <h1>AI Pulse</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #eaecf0", flexWrap: "wrap", gap: "10px" }}>
+        <h1 style={{ margin: 0, fontSize: "24px" }}>AI Pulse</h1>
+        {session && (
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={{ fontSize: "14px", color: "#475467" }}>
+              👤 <strong>{session.name}</strong> {org && <span style={{ color: "#667085" }}>({org.org_name} • {org.role})</span>}
+            </span>
+            <button
+              onClick={handleLogout}
+              style={{ background: "#fee4e2", color: "#d92d20", border: "1px solid #fecdca", padding: "6px 12px", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: 500 }}
+            >
+              Log Out
+            </button>
+          </div>
+        )}
+      </div>
+
       {step === "login" && (
         <Login onDone={(s) => { setSession(s); setStep("org"); }} />
       )}
