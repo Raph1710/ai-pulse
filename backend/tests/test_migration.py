@@ -58,3 +58,4 @@ def test_schema_migration_adds_missing_column(tmp_path):
     assert m.role == "admin"
     assert m.last_assessment_summary is None
     db.close()
+
