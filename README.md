@@ -23,7 +23,7 @@ A rigorous audit identified critical vulnerabilities and operational defects acr
 | **DATA-02** | **High** | Idempotency | Re-taking diagnostics appended duplicate rows to `responses`, skewing all reports and dashboard counts. |
 | **TEST-01** | **Medium** | Quality Assurance | `test_admin_cannot_see_other_org` tested querying the admin's *own* organization (`org_id=1`), giving false confidence. |
 
-Full details are documented in [docs/AUDIT.md](docs/AUDIT.md).
+Full details are documented in [docs/AUDIT.md](docs/AUDIT.md). For complete side-by-side Before vs. After code snippets and technical diff breakdowns of every problem, see [docs/PROBLEMS_AND_FIXES.md](docs/PROBLEMS_AND_FIXES.md).
 
 ---
 
