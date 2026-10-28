@@ -93,3 +93,20 @@ This log records every instance where the AI agent made an incorrect assumption,
   3. Added a prominent **"↻ Refresh Dashboard"** button with a "Last updated: [time]" timestamp in `frontend/src/pages/Dashboard.jsx`.
   4. Added a session header in `frontend/src/App.jsx` showing the logged-in user, company, role, and a **"Log Out"** button to allow clean role switching.
   5. Added automated regression test `test_dashboard_updates_on_submission_and_deletion_refresh` in `backend/tests/test_client_request.py`.
+
+
+---
+
+### Entry 7: Session Persistence Across Page Refreshes and Multi-Tab Token Isolation
+- **Date/Time**: 2026-10-28 19:45
+- **Context**: Frontend session lifecycle, navigation reload, and concurrent tab usage.
+- **What Happened**: When users reloaded the browser page (F5) or navigated directly, `frontend/src/App.jsx` initialized its React state to `session = null` and `step = "login"`. Even if a valid token was saved in storage, the user was repeatedly booted back to the login screen, losing their active organization and view context. Furthermore, using global `localStorage` for JWT tokens meant opening multiple tabs concurrently (e.g. testing an admin dashboard in one tab while simulating an employee diagnostic in another) led to cross-tab token overwrites and session collision.
+- **How It Was Caught**: Frontend manual end-to-end testing of admin dashboard refresh and multi-user workflows.
+- **Resolution**:
+  1. Updated `frontend/src/App.jsx` to lazily initialize `session`, `org`, and `step` from `sessionStorage`, seamlessly resuming the user's role-appropriate screen (`dashboard` for admin, `diagnostic` for employee) upon page refresh.
+  2. Implemented helper functions `saveSession` and `saveOrg` to synchronize React state with `sessionStorage`.
+  3. Updated `frontend/src/api.js` to store tokens in tab-isolated `sessionStorage` (with fallback to `localStorage`), actively pruning shared `localStorage` upon login to prevent cross-tab contamination.
+  4. Updated logout to clear both storage mechanisms (`sessionStorage.clear()`, `localStorage.clear()`).
+- **Key Lessons for AI Assistants**:
+  - Always consider browser refresh behavior and multi-role testing when architecting single-page application (SPA) state. Client-side authentication must persist active session state without forcing redundant re-logins on page reload.
+

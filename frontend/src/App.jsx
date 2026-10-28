@@ -6,12 +6,52 @@ import Report from "./pages/Report.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 
 export default function App() {
-  const [step, setStep] = useState("login");
-  const [session, setSession] = useState(null);
-  const [org, setOrg] = useState(null);
+  const [session, setSession] = useState(() => {
+    try {
+      const s = sessionStorage.getItem("session");
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [org, setOrg] = useState(() => {
+    try {
+      const o = sessionStorage.getItem("org");
+      return o ? JSON.parse(o) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [step, setStep] = useState(() => {
+    const s = sessionStorage.getItem("session");
+    const o = sessionStorage.getItem("org");
+    if (!s) return "login";
+    if (!o) return "org";
+    try {
+      const orgObj = JSON.parse(o);
+      return orgObj.role === "admin" ? "dashboard" : "diagnostic";
+    } catch {
+      return "login";
+    }
+  });
+
+  const saveSession = (s) => {
+    setSession(s);
+    if (s) sessionStorage.setItem("session", JSON.stringify(s));
+    else sessionStorage.removeItem("session");
+  };
+
+  const saveOrg = (o) => {
+    setOrg(o);
+    if (o) sessionStorage.setItem("org", JSON.stringify(o));
+    else sessionStorage.removeItem("org");
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    sessionStorage.clear();
+    localStorage.clear();
     setSession(null);
     setOrg(null);
     setStep("login");
@@ -37,12 +77,12 @@ export default function App() {
       </div>
 
       {step === "login" && (
-        <Login onDone={(s) => { setSession(s); setStep("org"); }} />
+        <Login onDone={(s) => { saveSession(s); setStep("org"); }} />
       )}
       {step === "org" && (
         <OrgPicker
           orgs={session.organizations}
-          onPick={(o) => { setOrg(o); setStep(o.role === "admin" ? "dashboard" : "diagnostic"); }}
+          onPick={(o) => { saveOrg(o); setStep(o.role === "admin" ? "dashboard" : "diagnostic"); }}
         />
       )}
       {step === "diagnostic" && <Diagnostic onDone={() => setStep("report")} />}
