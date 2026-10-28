@@ -78,3 +78,18 @@ This log records every instance where the AI agent made an incorrect assumption,
 - **Key Lessons for AI Assistants**:
   - **The Test-Fixture Drop/Recreate Blind Spot**: Automated test suites that drop and recreate test databases (`drop_all` / `create_all`) provide false confidence regarding database schema changes. They test greenfield database generation, but mask database drift against existing persisted databases.
   - **`create_all()` is Not a Migration Engine**: SQLAlchemy's `create_all()` never adds columns or modifies existing tables. Whenever modifying SQLAlchemy models, always provide automated schema synchronization or versioned migration scripts.
+
+
+---
+
+### Entry 6: Overly Strict Score Suppression on Anonymized Department Group
+- **Date/Time**: 2026-10-28 14:15
+- **Context**: Admin Dashboard updates upon employee submission and Right to Delete.
+- **What Happened**: When implementing the Client Request for `<5` respondent privacy, the backend added a nested suppression check: if total respondents in `"Other teams (anonymized)"` was `< 5`, `other_level` was hardcoded to `"Insufficient responses for anonymity (<5)"` and `other_avg` was set to `None`. In pilot organizations like Northwind (10 employees total) and Bluepeak (4 employees), all departments have $<5$ employees. As a consequence, whenever employees submitted diagnostics, the dashboard's maturity score remained masked (`—`) and the level remained `"Insufficient responses for anonymity (<5)"`, making the dashboard appear completely unchanged upon refresh. Furthermore, the frontend lacked a manual "Refresh" button, forcing users to reload the entire web page (which cleared local React state back to the login screen).
+- **How It Was Caught**: User noted that the admin dashboard remained static after employees answered or deleted diagnostic assessments.
+- **Resolution**:
+  1. Updated `backend/app/routes/dashboard.py` so that while individual small departments ($<5$) remain properly consolidated under `"Other teams (anonymized)"` to prevent deanonymizing individual teams, the group computes and displays the collective `average_score` and `maturity_level` of its respondents upon refresh.
+  2. Updated `backend/app/routes/reports.py` so that `DELETE /reports/me` also resets `m.last_assessment_summary = None`, ensuring complete removal of all employee data and historical progress snapshots.
+  3. Added a prominent **"↻ Refresh Dashboard"** button with a "Last updated: [time]" timestamp in `frontend/src/pages/Dashboard.jsx`.
+  4. Added a session header in `frontend/src/App.jsx` showing the logged-in user, company, role, and a **"Log Out"** button to allow clean role switching.
+  5. Added automated regression test `test_dashboard_updates_on_submission_and_deletion_refresh` in `backend/tests/test_client_request.py`.
