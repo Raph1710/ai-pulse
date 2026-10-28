@@ -924,3 +924,4 @@ app = FastAPI(title="AI Pulse API")
 2. Used SQLAlchemy's `inspect(bind_engine)` to inspect existing database tables on startup.
 3. If `memberships` exists but lacks `last_assessment_summary`, it automatically issues `ALTER TABLE memberships ADD COLUMN last_assessment_summary JSON` non-destructively.
 4. Added unit test `backend/tests/test_migration.py` that spins up a legacy SQLite database missing `last_assessment_summary`, triggers `init_db()`, and verifies that the column is added and queries succeed without error.
+
