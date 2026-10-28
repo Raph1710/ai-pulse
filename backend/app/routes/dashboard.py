@@ -65,14 +65,9 @@ def org_dashboard(org_id: int | None = None, m: models.Membership = Depends(curr
             other_count += 1
 
     if other_count > 0:
-        if other_responded >= ANONYMITY_THRESHOLD:
-            other_avg = (sum(other_averages) / len(other_averages)) if other_averages else None
-            other_level = maturity_level(other_avg)
-            score_val = round(other_avg, 2) if other_avg is not None else None
-        else:
-            other_avg = None
-            other_level = "Insufficient responses for anonymity (<5)"
-            score_val = None
+        other_avg = (sum(other_averages) / len(other_averages)) if other_averages else None
+        other_level = maturity_level(other_avg) if other_avg is not None else "Not assessed"
+        score_val = round(other_avg, 2) if other_avg is not None else None
 
         departments.append({
             "department": "Other teams (anonymized)",

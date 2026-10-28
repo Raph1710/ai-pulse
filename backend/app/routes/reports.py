@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..db import get_db
@@ -9,10 +9,26 @@ from ..utils import maturity_level
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 NEXT_STEPS = {
-    "support": ["Use AI to draft first replies, then edit", "Summarise long ticket threads before escalating", "Never paste customer details into public chatbots"],
-    "engineering": ["Use a code assistant for tests and refactors", "Review every AI suggestion before merging", "Keep secrets and customer data out of prompts"],
-    "sales": ["Draft outreach emails with AI and personalise them", "Summarise call notes into CRM updates", "Check AI-written claims before sending"],
-    "manager": ["Agree an AI usage policy with your team", "Pick one workflow per quarter to improve with AI", "Track time saved, not tool licences"],
+    "support": [
+        "Create an approved prompt library for customer emails to avoid pasting raw ticket text.",
+        "Set up an automated redaction step so customer names and account numbers never reach external AI tools.",
+        "Track resolution times on AI-assisted vs unassisted tickets to measure actual lift.",
+    ],
+    "engineering": [
+        "Add an internal code-review rule that any AI-generated function must have test coverage.",
+        "Run an AI pair-programming lunch-and-learn on prompt caching and context window limits.",
+        "Set up a lightweight eval harness for any model outputs embedded in production services.",
+    ],
+    "sales": [
+        "Agree on standard prompts for account research so reps get consistent briefing sheets.",
+        "Do not paste non-public client financial info into consumer-tier AI tools.",
+        "Share the top 3 prompt templates that actually won meetings this quarter with the rest of the team.",
+    ],
+    "manager": [
+        "Publish an explicit AI policy: what data is allowed, which tools are sanctioned, who approves new ones.",
+        "Audit team tooling for unsanctioned consumer AI subscriptions on company cards.",
+        "Identify the 2 highest-friction workflows in the department and run a 2-week AI pilot on one of them.",
+    ],
 }
 
 
@@ -52,5 +68,6 @@ def my_report(m: models.Membership = Depends(current_membership), db: Session = 
 def delete_my_data(m: models.Membership = Depends(current_membership), db: Session = Depends(get_db)):
     """Right to delete: permanently purge employee's diagnostic responses."""
     count = db.query(models.Response).filter_by(membership_id=m.id).delete()
+    m.last_assessment_summary = None
     db.commit()
     return {"deleted": True, "count": count}
