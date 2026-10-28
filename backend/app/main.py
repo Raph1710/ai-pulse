@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db import Base, engine
+from .db import init_db
 from .routes import auth_routes, diagnostic, reports, dashboard
 
-Base.metadata.create_all(bind=engine)
+# Initialize tables and apply automatic schema migration for existing databases
+init_db()
 
 app = FastAPI(title="AI Pulse API")
 app.add_middleware(

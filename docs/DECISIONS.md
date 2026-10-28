@@ -46,3 +46,12 @@ This document records key engineering decisions, evaluated alternatives, and the
 - **Context**: The existing system appends duplicate response rows if an employee retakes the diagnostic, corrupting reports and dashboard metrics. Furthermore, employees have no way to observe progress after training.
 - **Decision**: Implement a versioned / cycle-based diagnostic retake: an employee can retake the diagnostic, which cleanly archives/replaces prior responses while preserving a snapshot for progress comparison ("What Changed Since Last Diagnostic"). It reports score delta, resolved risks, and newly flagged areas.
 - **Alternatives Considered**: Restrict users to a single submission forever. Rejected because continuous improvement and re-assessment is the core purpose of an AI maturity tool.
+
+
+---
+
+## ADR-07: Startup Schema Synchronization & Database Evolution
+- **Context**: In SQLite and SQLAlchemy, `Base.metadata.create_all()` uses `CREATE TABLE IF NOT EXISTS` and does not add new columns to existing tables. When `Membership.last_assessment_summary` was added, existing instances of `aipulse.db` lacked the column, throwing `sqlite3.OperationalError: no such column: memberships.last_assessment_summary` upon querying.
+- **Decision**: Introduce `init_db()` in `backend/app/db.py` executed at application startup in `main.py`. It uses SQLAlchemy `inspect(engine)` to inspect existing database tables on boot. If tables exist but miss newly defined columns, non-destructive `ALTER TABLE ... ADD COLUMN` statements are executed automatically.
+- **Alternatives Considered**: Require developers/users to re-run `python -m app.seed`. Rejected because re-seeding drops all tables (`drop_all`) and wipes all existing local data.
+- **Impact**: Provides seamless backward compatibility for existing database files across branches and deployments without manual intervention.

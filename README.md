@@ -127,12 +127,22 @@ Northwind HR requested two changes:
 
 AI coding tools were used throughout this project for rapid code review, generating adversarial test fixtures, writing boilerplate tests, and identifying edge cases.
 
-### Most Instructive AI Mistake (From `docs/AI_LOG.md`):
-During the initial environment bring-up, the host environment had an experimental Python 3.14 pre-release build as its default `python`. The AI assistant initially attempted to execute `pip install -r requirements.txt` against Python 3.14. Because `pydantic-core` wheels for Windows did not yet exist for Python 3.14, pip attempted to build from source using `maturin`, failing with a Windows temp file lock `[WinError 32]`. 
+### Most Instructive AI Mistakes (From `docs/AI_LOG.md`):
 
-Furthermore, when the developer ran `uvicorn app.main:app --reload`, the AI assistant initially assumed the user had activated the virtual environment in their PowerShell session. In reality, the user was running in a global PowerShell session where `.venv\Scripts` was not in PATH, and the system Python lacked `sqlalchemy`.
+1. **Test-Fixture Drop/Recreate Bias & SQLite Schema Drift (`memberships.last_assessment_summary`)**:
+   - **What Happened**: When adding the diagnostic retake feature (`feat/retake-and-progress`), the AI added `last_assessment_summary` to `models.Membership`. It then ran `pytest`, which passed with 100% green status because `conftest.py` calls `seed.run()`, which drops all tables (`Base.metadata.drop_all()`) and recreates them from scratch in `test.db`. The AI falsely assumed that calling `Base.metadata.create_all()` in `main.py` would update existing databases (like `backend/aipulse.db`). In reality, SQLAlchemy's `create_all()` emits `CREATE TABLE IF NOT EXISTS` and **never alters existing tables or adds new columns**. When the application started against `aipulse.db` and a user logged in, SQLAlchemy queried `memberships.last_assessment_summary`, throwing:
+     ```
+     sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: memberships.last_assessment_summary
+     ```
+   - **How It Was Fixed**:
+     1. Updated `aipulse.db` with `ALTER TABLE memberships ADD COLUMN last_assessment_summary JSON`.
+     2. Built defensive auto-migration `init_db()` in `backend/app/db.py` (executed at startup by `main.py`) that uses SQLAlchemy's `inspect(engine)` to auto-detect and apply missing columns on startup.
+     3. Added regression test `backend/tests/test_migration.py` verifying legacy databases automatically migrate without data loss.
+   - **The Lesson**: Automated tests that drop and recreate test databases create a blind spot for schema migrations. Never assume `create_all()` migrates existing database schemas.
 
-**The Lesson**: The AI assistant learned that environment state must never be assumed. Reliable enterprise projects must provide self-contained virtual environments, clear path-agnostic scripts (`scripts/setup.ps1`, `scripts/test.ps1`), and resilient documentation rather than assuming specific shell activation states.
+2. **Python Runtime Environment & Shell State Discrepancy**:
+   - **What Happened**: During the initial environment bring-up, the host environment had an experimental Python 3.14 pre-release build as its default `python`. The AI assistant initially attempted to execute `pip install -r requirements.txt` against Python 3.14. Because `pydantic-core` wheels for Windows did not yet exist for Python 3.14, pip attempted to build from source using `maturin`, failing with a Windows temp file lock `[WinError 32]`. Furthermore, when the developer ran `uvicorn app.main:app --reload`, the AI assistant initially assumed the user had activated the virtual environment in their PowerShell session. In reality, the user was running in a global PowerShell session where `.venv\Scripts` was not in PATH, and the system Python lacked `sqlalchemy`.
+   - **The Lesson**: The AI assistant learned that environment state must never be assumed. Reliable enterprise projects must provide self-contained virtual environments, clear path-agnostic scripts (`scripts/setup.ps1`, `scripts/test.ps1`), and resilient documentation rather than assuming specific shell activation states.
 
 ---
 
@@ -197,4 +207,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\demo.ps1
 
 1. **Live LLM Cost & Rate Limiting**: While `AI_MODE=mock` is deterministic and tested, running `AI_MODE=live` currently lacks token bucket rate limiting per employee or organization. Next step: add Redis-backed token bucket rate limits.
 2. **Organization-Level Export**: While the dashboard displays anonymized departments, enterprise clients frequently request CSV/Excel exports for board reporting. Next step: implement an export endpoint enforcing the same `<5` anonymity threshold.
-3. **Database Migration Framework**: Database schema is currently initialized via SQLAlchemy `create_all()`. For enterprise production, integrate Alembic for versioned database schema migrations.
+3. **Database Migration Framework**: Development schema synchronization is handled automatically on startup via `init_db()` in `app/db.py` (inspecting existing tables and executing non-destructive `ALTER TABLE` statements). For enterprise production with large schema evolutions, rolling deployments, or downgrade support, integrate Alembic for versioned migration tracking.
